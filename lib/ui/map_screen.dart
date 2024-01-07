@@ -64,6 +64,13 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   }
 
   @override
+  void dispose() {
+    _controllerAnimatePath.dispose();
+    _controllerAnimateUndoneLvl.dispose();
+    super.dispose();
+  }
+
+  @override
   void didChangeDependencies() {
     size = MediaQuery.of(context).size;
     super.didChangeDependencies();
@@ -124,7 +131,7 @@ class Level {
 
 class MapPathPainter extends CustomPainter {
   final double _progress;
-  final double _showCurretLevel;
+  final double _showCurrentLevel;
   final int lvl;
 
   MapPathPainter(
@@ -133,7 +140,7 @@ class MapPathPainter extends CustomPainter {
       required double progress,
       required double showCurrentLevel})
       : _progress = progress,
-        _showCurretLevel = showCurrentLevel;
+        _showCurrentLevel = showCurrentLevel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -155,9 +162,9 @@ class MapPathPainter extends CustomPainter {
     final Path statciPath = _generateStaticPathAndDoneLvl(size, lvl, levels).$1;
     final List<Offset> selectedPoints =
         _generateStaticPathAndDoneLvl(size, lvl, levels).$2;
-    final animatePath = _generateAnimatePathandUnDoneLvl(size, lvl, levels).$1;
+    final animatePath = _generateAnimatePathAndUnDoneLvl(size, lvl, levels).$1;
     final Offset lastPoint =
-        _generateAnimatePathandUnDoneLvl(size, lvl, levels).$2;
+        _generateAnimatePathAndUnDoneLvl(size, lvl, levels).$2;
     final PathMetrics animPathMetrics = animatePath.computeMetrics();
 
     canvas.drawPath(
@@ -221,7 +228,7 @@ class MapPathPainter extends CustomPainter {
           Matrix4.translationValues(lastPoint.dx - 25, lastPoint.dy - 25, 0)
               .storage),
       Paint()
-        ..color = Colors.blue.withOpacity(_showCurretLevel)
+        ..color = Colors.blue.withOpacity(_showCurrentLevel)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 10
         ..strokeCap = StrokeCap.round
@@ -277,7 +284,7 @@ class MapPathPainter extends CustomPainter {
   return (path, selectedPoints);
 }
 
-(Path, Offset) _generateAnimatePathandUnDoneLvl(
+(Path, Offset) _generateAnimatePathAndUnDoneLvl(
     Size size, int lvl, List<Level> levels) {
   PathMetric pathMetric = levels[lvl].path.computeMetrics().first;
   Offset lastPoint =
