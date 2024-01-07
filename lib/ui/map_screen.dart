@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:core';
 
 import 'package:flutter/material.dart';
 
@@ -12,35 +13,50 @@ class MapWidget extends StatefulWidget {
   State<MapWidget> createState() => _MapWidgetState();
 }
 
-class _MapWidgetState extends State<MapWidget>
-    with SingleTickerProviderStateMixin {
+class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   final horizontalScrollController1 = ScrollController();
   final horizontalScrollController2 = ScrollController();
-  final horizontalScrollController3 = ScrollController();
   late Size size;
   double _progress = 0.0;
-  late Animation<double> animation;
-  late Animation _animation;
-  late AnimationController _controller;
+  double _showCurretLevel = 0.0;
+  late Animation _animationPath;
+  late Animation _animationUndoneLvl;
+
+  late AnimationController _controllerAnimatePath;
+  late AnimationController _controllerAnimateUndoneLvl;
   @override
   void initState() {
-    _controller = AnimationController(
-      duration: const Duration(seconds: 10),
+    _controllerAnimateUndoneLvl = AnimationController(
+      duration: const Duration(seconds: 3),
       vsync: this,
     );
-    _animation = Tween(begin: 0.0, end: 1.0).animate(_controller);
-    _controller.forward().whenComplete(() => _controller.repeat());
-    _controller.addListener(() {
+    _controllerAnimatePath = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    _animationPath =
+        Tween(begin: 0.0, end: 1.0).animate(_controllerAnimatePath);
+    _animationUndoneLvl =
+        Tween(begin: 0.0, end: 1.0).animate(_controllerAnimateUndoneLvl);
+    _controllerAnimatePath.forward().whenComplete(() {
+      _controllerAnimateUndoneLvl.forward();
+    });
+
+    _controllerAnimateUndoneLvl.addListener(() {
       setState(() {
-        _progress = _animation.value;
+        _showCurretLevel = _animationUndoneLvl.value;
+      });
+    });
+
+    _controllerAnimatePath.addListener(() {
+      setState(() {
+        _progress = _animationPath.value;
       });
     });
     horizontalScrollController2.addListener(() {
       setState(() {
         horizontalScrollController1
             .jumpTo(horizontalScrollController2.position.pixels);
-        // horizontalScrollController3
-        //     .jumpTo(horizontalScrollController2.position.pixels);
       });
     });
 
@@ -69,13 +85,12 @@ class _MapWidgetState extends State<MapWidget>
                 child: SizedBox(
                   width: 1600,
                   child: Image.asset(
-                    'assets/fullmap.jpg', // Zastąp to odpowiednią ścieżką do swojego pliku PNG
+                    'assets/fullmap.jpg',
                     fit: BoxFit.fitWidth,
                   ),
                 ),
               ),
             ),
-
             Positioned.fill(
               child: SingleChildScrollView(
                 controller: horizontalScrollController2,
@@ -84,25 +99,15 @@ class _MapWidgetState extends State<MapWidget>
                   width: 1600,
                   height: MediaQuery.of(context).size.height,
                   child: CustomPaint(
-                    painter: MapPathPainter(progress: _progress),
+                    painter: MapPathPainter(
+                        showCurrentLevel: _showCurretLevel,
+                        progress: _progress,
+                        repaint: _controllerAnimatePath,
+                        lvl: 2),
                   ),
                 ),
               ),
             ),
-
-            // Positioned.fill(
-            //   child: SingleChildScrollView(
-            //     controller: horizontalScrollController2,
-            //     scrollDirection: Axis.horizontal,
-            //     child: SizedBox(
-            //       width: 1600,
-            //       child: Image.asset(
-            //         'assets/mock_path.png', // Zastąp to odpowiednią ścieżką do swojego pliku PNG
-            //         fit: BoxFit.fitWidth,
-            //       ),
-            //     ),
-            //   ),
-            // ),
           ],
         ),
       ),
@@ -110,36 +115,67 @@ class _MapWidgetState extends State<MapWidget>
   }
 }
 
+class Level {
+  const Level({
+    required this.path,
+  });
+  final Path path;
+}
+
 class MapPathPainter extends CustomPainter {
   final double _progress;
+  final double _showCurretLevel;
+  final int lvl;
 
-  MapPathPainter({super.repaint, required double progress})
-      : _progress = progress;
+  MapPathPainter(
+      {required this.lvl,
+      super.repaint,
+      required double progress,
+      required double showCurrentLevel})
+      : _progress = progress,
+        _showCurretLevel = showCurrentLevel;
+
   @override
   void paint(Canvas canvas, Size size) {
+    List<Level> levels = _getLevels(size);
+
     final Path x = Path()
       ..moveTo(20, 20)
       ..lineTo(40, 40)
       ..moveTo(40, 20)
       ..lineTo(20, 40);
 
-    final Path path = Path()
-      ..moveTo(0, 0)
-      ..quadraticBezierTo(size.width * 0.08, size.width * 0.03,
-          size.height * 0.11, size.height * 0.6)
-      ..quadraticBezierTo(size.width * 0.01, size.height * 1.1,
-          size.width * 0.12, size.height * 0.95)
-      ..quadraticBezierTo(230, size.height / 700, 300, 40)
-      ..quadraticBezierTo(400, 0, 385, size.height - 100)
-      ..quadraticBezierTo(400, size.height + 70, 520, size.height - 100);
+    final Path xDone = Path()
+      ..moveTo(20, 20)
+      ..lineTo(40, 40)
+      ..moveTo(40, 20)
+      ..lineTo(20, 40);
 
-    final PathMetrics pathMetrics = path.computeMetrics();
-    final PathMetrics xPathMetrics = path.computeMetrics();
-    final PathMetrics animPathMetrics = path.computeMetrics();
-    final int divisions = xPathMetrics.first.length.floor();
+// animate path
+    final Path statciPath = _generateStaticPathAndDoneLvl(size, lvl, levels).$1;
+    final List<Offset> selectedPoints =
+        _generateStaticPathAndDoneLvl(size, lvl, levels).$2;
+    final animatePath = _generateAnimatePathandUnDoneLvl(size, lvl, levels).$1;
+    final Offset lastPoint =
+        _generateAnimatePathandUnDoneLvl(size, lvl, levels).$2;
+    final PathMetrics animPathMetrics = animatePath.computeMetrics();
 
-//compute patch to animate
+    canvas.drawPath(
+      dashPath(
+        statciPath,
+        dashArray: CircularIntervalList<double>(<double>[10, 20]),
+      ),
+      Paint()
+        ..color = const Color.fromARGB(255, 0, 0, 0)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 10
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
 
+    ///
+    /// draw animated path with dash
+    ///
     for (var element in animPathMetrics) {
       final double length = element.length * _progress;
       final Path newPath = element.extractPath(0, length);
@@ -149,55 +185,102 @@ class MapPathPainter extends CustomPainter {
             dashArray: CircularIntervalList<double>(<double>[10, 20]),
           ),
           Paint()
-            ..color = Colors.black
+            ..color = const Color.fromARGB(255, 26, 255, 0)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 10
             ..strokeCap = StrokeCap.round
             ..strokeJoin = StrokeJoin.round);
     }
 
-    // canvas.drawPath(
-    //   dashPath(
-    //     path,
-    //     dashArray: CircularIntervalList<double>(<double>[10, 20]),
-    //   ),
-    //   Paint()
-    //     ..color = Colors.black
-    //     ..style = PaintingStyle.stroke
-    //     ..strokeWidth = 10
-    //     ..strokeCap = StrokeCap.round
-    //     ..strokeJoin = StrokeJoin.round,
-    // );
-    List<Offset> selectedPoints = [];
+    ///
+    /// draw done levels
+    ///
 
-    for (final PathMetric pathMetric in pathMetrics) {
-      for (double i = 0.0; i <= divisions; i++) {
-        double offset = pathMetric.length * (i / divisions);
-        Tangent tangent = pathMetric.getTangentForOffset(offset)!;
-        selectedPoints.add(tangent.position);
-
-        if (selectedPoints.length >= 10 && selectedPoints.length % 150 == 0) {
-          canvas.drawPath(
-            x.transform(Matrix4.translationValues(
-                    //polowa x
-                    tangent.position.dx - 30,
-                    tangent.position.dy - 30,
-                    0)
-                .storage),
-            Paint()
-              ..color = Colors.red
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 10
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round,
-          );
-        }
-      }
+    for (var element in selectedPoints) {
+      canvas.drawPath(
+        x.transform(Matrix4.translationValues(
+                //polowa x
+                (element.dx - 25),
+                (element.dy - 25),
+                0)
+            .storage),
+        Paint()
+          ..color = Colors.red
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 10
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
     }
+
+    ///
+    /// draw undone level
+    ///
+    canvas.drawPath(
+      xDone.transform(
+          Matrix4.translationValues(lastPoint.dx - 25, lastPoint.dy - 25, 0)
+              .storage),
+      Paint()
+        ..color = Colors.blue.withOpacity(_showCurretLevel)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 10
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
+
+  List<Level> _getLevels(Size size) {
+    var lvls = [
+      Level(
+        path: Path()
+          ..moveTo(0, 0)
+          ..cubicTo(
+              120, size.height / 5, 60, size.height / 4, 40, size.height - 40),
+      ),
+      Level(
+        path: Path()
+          ..moveTo(40, size.height - 40)
+          ..cubicTo(60, size.height, 270, size.height + 40, 200, 200),
+      ),
+      Level(
+        path: Path()
+          ..moveTo(200, 200)
+          ..cubicTo(200, 0, 450, -80, 380, 270),
+      ),
+    ];
+    return lvls;
+  }
+}
+
+(Path, List<Offset>) _generateStaticPathAndDoneLvl(
+    Size size, int lvl, List<Level> levels) {
+  List<Offset> selectedPoints = [];
+
+  final indexes =
+      levels.where((element) => levels.indexOf(element) < lvl).toList();
+  Path path = Path();
+  for (var element in indexes) {
+    path.addPath(element.path, Offset.zero);
+    final PathMetrics pathMetrics = element.path.computeMetrics();
+    for (final PathMetric pathMetric in pathMetrics) {
+      final Tangent tangent =
+          pathMetric.getTangentForOffset(pathMetric.length)!;
+      selectedPoints.add(tangent.position);
+    }
+    Talker().good(selectedPoints.toString());
+  }
+  return (path, selectedPoints);
+}
+
+(Path, Offset) _generateAnimatePathandUnDoneLvl(
+    Size size, int lvl, List<Level> levels) {
+  PathMetric pathMetric = levels[lvl].path.computeMetrics().first;
+  Offset lastPoint =
+      pathMetric.getTangentForOffset(pathMetric.length)!.position;
+  return (levels[lvl].path, lastPoint);
 }
