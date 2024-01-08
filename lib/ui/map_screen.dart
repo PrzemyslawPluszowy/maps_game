@@ -23,34 +23,36 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    //if state image not null
-
     context.read<MapCubit>().loadImage(MediaQuery.of(context).size.height);
-    return Material(
-        child: SizedBox(
-      width: 1600,
-      height: MediaQuery.of(context).size.height,
-      child: SingleChildScrollView(
-        controller: horizontalScrollController1,
-        scrollDirection: Axis.horizontal,
-        child: BlocBuilder<MapCubit, MapState>(
-          builder: (context, state) {
-            return state.map(
-              loading: (_) => const Center(child: CircularProgressIndicator()),
-              loaded: (loaded) {
-                return MapGenerate(state: loaded);
-              },
-            );
-          },
-        ),
+    return SingleChildScrollView(
+      controller: horizontalScrollController1,
+      scrollDirection: Axis.horizontal,
+      child: BlocBuilder<MapCubit, MapState>(
+        builder: (context, state) {
+          return state.when(
+            loading: () => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            loaded: (checkpoints, image, lvl) {
+              return MapGenerate(
+                  lvl: lvl, checkpoints: checkpoints, image: image);
+            },
+          );
+        },
       ),
-    ));
+    );
   }
 }
 
 class MapGenerate extends StatefulWidget {
-  const MapGenerate({super.key, required this.state});
-  final MapState state;
+  const MapGenerate(
+      {super.key,
+      required this.lvl,
+      required this.checkpoints,
+      required this.image});
+  final int lvl;
+  final List<Checkpoint> checkpoints;
+  final ui.Image image;
 
   @override
   State<MapGenerate> createState() => _MapGenerateState();
@@ -81,6 +83,7 @@ class _MapGenerateState extends State<MapGenerate>
         _progress = _animationPath.value;
       });
     });
+    _controllerAnimatePath.forward();
 
     super.initState();
   }
@@ -99,6 +102,10 @@ class _MapGenerateState extends State<MapGenerate>
 
   @override
   Widget build(BuildContext context) {
+    final checkpoints = widget.checkpoints.sublist(0, widget.lvl + 1);
+    final unDoneCheckpoints = checkpoints.last;
+    final doneCheckpoints = checkpoints.sublist(0, checkpoints.length - 1);
+
     return SizedBox(
         width: 1600,
         height: MediaQuery.of(context).size.height,
@@ -107,63 +114,36 @@ class _MapGenerateState extends State<MapGenerate>
           children: [
             CustomPaint(
               painter: MapPathPainter(
-                  bgImage: widget.state.image,
-                  progress: widget._progress,
-                  repaint: widget._controllerAnimatePath,
-                  checkpoints: loaded.checkpoints,
-                  lvl: loaded.lvl),
+                  bgImage: widget.image,
+                  progress: _progress,
+                  repaint: _controllerAnimatePath,
+                  checkpoints: widget.checkpoints,
+                  lvl: widget.lvl),
             ).animate().fadeIn(duration: const Duration(milliseconds: 500)),
-            for (final element
-                in loaded.checkpoints.sublist(0, loaded.lvl + 1)) ...[
-              if (element == loaded.checkpoints.last && widget._progress == 1.0)
-                Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Positioned(
-                      left: element.position.dx - widget.halfSizeCheckpoint,
-                      top: element.position.dy - widget.halfSizeCheckpoint * 2,
-                      child: Container(
-                        width: widget.halfSizeCheckpoint * 2,
-                        height: widget.halfSizeCheckpoint * 2,
-                        decoration: const BoxDecoration(
-                          image: DecorationImage(
-                            image: AssetImage('assets/done_lvl.png'),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                        left: element.position.dx - widget.halfSizeCheckpoint,
-                        top: element.position.dy - widget.halfSizeCheckpoint,
-                        child: Container(
-                          width: widget.halfSizeCheckpoint * 2,
-                          height: widget.halfSizeCheckpoint * 2,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage('assets/undone_lvl.png'),
-                            ),
-                          ),
-                        )),
-                  ],
-                ).animate().fadeIn(duration: const Duration(milliseconds: 500))
-              else if (element != loaded.checkpoints.last)
-                Positioned(
-                  left: element.position.dx - widget.halfSizeCheckpoint,
-                  top: element.position.dy - widget.halfSizeCheckpoint,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage('assets/done_lvl.png'),
-                        fit: BoxFit.fill,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            ...doneCheckpoints
+                .map((e) => _checkpointWidget(e, 'assets/done_lvl.png')),
+            if (_progress == 1)
+              _checkpointWidget(unDoneCheckpoints, 'assets/undone_lvl.png')
+                ..animate().fadeIn(duration: const Duration(milliseconds: 500)),
           ],
         ));
+  }
+
+  Positioned _checkpointWidget(Checkpoint e, String assetImage) {
+    return Positioned(
+      left: e.position.dx - halfSizeCheckpoint,
+      top: e.position.dy - halfSizeCheckpoint,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage(assetImage),
+            fit: BoxFit.fill,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -200,7 +180,12 @@ class MapPathPainter extends CustomPainter {
       levels.addAll(_getLevels(size));
     }
 
-    canvas.drawImage(bgImage, Offset.zero, Paint());
+    canvas.drawImageRect(
+        bgImage,
+        Rect.fromLTWH(
+            0, 0, bgImage.width.toDouble(), bgImage.height.toDouble()),
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint());
 
     final Path statciPath = _generateStaticPathAndDoneLvl(size, lvl, levels);
 
