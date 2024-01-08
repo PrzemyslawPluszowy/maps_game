@@ -1,10 +1,15 @@
 import 'dart:ui';
 import 'dart:core';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:game_map/ui/cubit/map_cubit.dart';
 
 import 'package:path_drawing/path_drawing.dart';
-import 'package:talker/talker.dart';
+
+import 'models/checkpoints.dart';
 
 class MapWidget extends StatefulWidget {
   const MapWidget({Key? key}) : super(key: key);
@@ -15,48 +20,65 @@ class MapWidget extends StatefulWidget {
 
 class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   final horizontalScrollController1 = ScrollController();
-  final horizontalScrollController2 = ScrollController();
+
+  @override
+  Widget build(BuildContext context) {
+    //if state image not null
+
+    context.read<MapCubit>().loadImage(MediaQuery.of(context).size.height);
+    return Material(
+        child: SizedBox(
+      width: 1600,
+      height: MediaQuery.of(context).size.height,
+      child: SingleChildScrollView(
+        controller: horizontalScrollController1,
+        scrollDirection: Axis.horizontal,
+        child: BlocBuilder<MapCubit, MapState>(
+          builder: (context, state) {
+            return state.map(
+              loading: (_) => const Center(child: CircularProgressIndicator()),
+              loaded: (loaded) {
+                return MapGenerate(state: loaded);
+              },
+            );
+          },
+        ),
+      ),
+    ));
+  }
+}
+
+class MapGenerate extends StatefulWidget {
+  const MapGenerate({super.key, required this.state});
+  final MapState state;
+
+  @override
+  State<MapGenerate> createState() => _MapGenerateState();
+}
+
+class _MapGenerateState extends State<MapGenerate>
+    with TickerProviderStateMixin {
   late Size size;
   double _progress = 0.0;
-  double _showCurretLevel = 0.0;
   late Animation _animationPath;
-  late Animation _animationUndoneLvl;
-
   late AnimationController _controllerAnimatePath;
-  late AnimationController _controllerAnimateUndoneLvl;
+  final double halfSizeCheckpoint = 20;
+  ui.Image? bgImage;
+
   @override
   void initState() {
-    _controllerAnimateUndoneLvl = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
     _controllerAnimatePath = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(
+        seconds: 3,
+      ),
       vsync: this,
     );
     _animationPath =
         Tween(begin: 0.0, end: 1.0).animate(_controllerAnimatePath);
-    _animationUndoneLvl =
-        Tween(begin: 0.0, end: 1.0).animate(_controllerAnimateUndoneLvl);
-    _controllerAnimatePath.forward().whenComplete(() {
-      _controllerAnimateUndoneLvl.forward();
-    });
-
-    _controllerAnimateUndoneLvl.addListener(() {
-      setState(() {
-        _showCurretLevel = _animationUndoneLvl.value;
-      });
-    });
 
     _controllerAnimatePath.addListener(() {
       setState(() {
         _progress = _animationPath.value;
-      });
-    });
-    horizontalScrollController2.addListener(() {
-      setState(() {
-        horizontalScrollController1
-            .jumpTo(horizontalScrollController2.position.pixels);
       });
     });
 
@@ -66,7 +88,6 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
   @override
   void dispose() {
     _controllerAnimatePath.dispose();
-    _controllerAnimateUndoneLvl.dispose();
     super.dispose();
   }
 
@@ -78,112 +99,126 @@ class _MapWidgetState extends State<MapWidget> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      child: SizedBox(
+    return SizedBox(
         width: 1600,
         height: MediaQuery.of(context).size.height,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Positioned.fill(
-              child: SingleChildScrollView(
-                controller: horizontalScrollController1,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 1600,
-                  child: Image.asset(
-                    'assets/fullmap.jpg',
-                    fit: BoxFit.fitWidth,
+            CustomPaint(
+              painter: MapPathPainter(
+                  bgImage: widget.state.image,
+                  progress: widget._progress,
+                  repaint: widget._controllerAnimatePath,
+                  checkpoints: loaded.checkpoints,
+                  lvl: loaded.lvl),
+            ).animate().fadeIn(duration: const Duration(milliseconds: 500)),
+            for (final element
+                in loaded.checkpoints.sublist(0, loaded.lvl + 1)) ...[
+              if (element == loaded.checkpoints.last && widget._progress == 1.0)
+                Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned(
+                      left: element.position.dx - widget.halfSizeCheckpoint,
+                      top: element.position.dy - widget.halfSizeCheckpoint * 2,
+                      child: Container(
+                        width: widget.halfSizeCheckpoint * 2,
+                        height: widget.halfSizeCheckpoint * 2,
+                        decoration: const BoxDecoration(
+                          image: DecorationImage(
+                            image: AssetImage('assets/done_lvl.png'),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                        left: element.position.dx - widget.halfSizeCheckpoint,
+                        top: element.position.dy - widget.halfSizeCheckpoint,
+                        child: Container(
+                          width: widget.halfSizeCheckpoint * 2,
+                          height: widget.halfSizeCheckpoint * 2,
+                          decoration: const BoxDecoration(
+                            image: DecorationImage(
+                              image: AssetImage('assets/undone_lvl.png'),
+                            ),
+                          ),
+                        )),
+                  ],
+                ).animate().fadeIn(duration: const Duration(milliseconds: 500))
+              else if (element != loaded.checkpoints.last)
+                Positioned(
+                  left: element.position.dx - widget.halfSizeCheckpoint,
+                  top: element.position.dy - widget.halfSizeCheckpoint,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/done_lvl.png'),
+                        fit: BoxFit.fill,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Positioned.fill(
-              child: SingleChildScrollView(
-                controller: horizontalScrollController2,
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 1600,
-                  height: MediaQuery.of(context).size.height,
-                  child: CustomPaint(
-                    painter: MapPathPainter(
-                        showCurrentLevel: _showCurretLevel,
-                        progress: _progress,
-                        repaint: _controllerAnimatePath,
-                        lvl: 2),
-                  ),
-                ),
-              ),
-            ),
+            ],
           ],
-        ),
-      ),
-    );
+        ));
   }
-}
-
-class Level {
-  const Level({
-    required this.path,
-  });
-  final Path path;
 }
 
 class MapPathPainter extends CustomPainter {
   final double _progress;
-  final double _showCurrentLevel;
   final int lvl;
+  final List<Path> levels = [];
+  final ui.Image bgImage;
+  final List<Checkpoint> checkpoints;
+  final Paint donePathPaint = Paint()
+    ..color = const Color.fromARGB(255, 0, 0, 0)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 10
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round;
+  final Paint unDonePathPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 10
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..color = const Color.fromARGB(255, 79, 0, 249);
 
   MapPathPainter(
-      {required this.lvl,
+      {required this.checkpoints,
+      required this.lvl,
       super.repaint,
       required double progress,
-      required double showCurrentLevel})
-      : _progress = progress,
-        _showCurrentLevel = showCurrentLevel;
+      required this.bgImage})
+      : _progress = progress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    List<Level> levels = _getLevels(size);
+    if (levels.isEmpty) {
+      levels.addAll(_getLevels(size));
+    }
 
-    final Path x = Path()
-      ..moveTo(20, 20)
-      ..lineTo(40, 40)
-      ..moveTo(40, 20)
-      ..lineTo(20, 40);
+    canvas.drawImage(bgImage, Offset.zero, Paint());
 
-    final Path xDone = Path()
-      ..moveTo(20, 20)
-      ..lineTo(40, 40)
-      ..moveTo(40, 20)
-      ..lineTo(20, 40);
+    final Path statciPath = _generateStaticPathAndDoneLvl(size, lvl, levels);
 
-// animate path
-    final Path statciPath = _generateStaticPathAndDoneLvl(size, lvl, levels).$1;
-    final List<Offset> selectedPoints =
-        _generateStaticPathAndDoneLvl(size, lvl, levels).$2;
-    final animatePath = _generateAnimatePathAndUnDoneLvl(size, lvl, levels).$1;
-    final Offset lastPoint =
-        _generateAnimatePathAndUnDoneLvl(size, lvl, levels).$2;
+    final animatePath = _generateAnimatePathAndUnDoneLvl(size, lvl, levels);
+
     final PathMetrics animPathMetrics = animatePath.computeMetrics();
 
     canvas.drawPath(
-      dashPath(
-        statciPath,
-        dashArray: CircularIntervalList<double>(<double>[10, 20]),
-      ),
-      Paint()
-        ..color = const Color.fromARGB(255, 0, 0, 0)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
+        dashPath(
+          statciPath,
+          dashArray: CircularIntervalList<double>(<double>[10, 20]),
+        ),
+        donePathPaint);
 
     ///
     /// draw animated path with dash
     ///
-    for (var element in animPathMetrics) {
+    for (final element in animPathMetrics) {
       final double length = element.length * _progress;
       final Path newPath = element.extractPath(0, length);
       canvas.drawPath(
@@ -191,49 +226,8 @@ class MapPathPainter extends CustomPainter {
             newPath,
             dashArray: CircularIntervalList<double>(<double>[10, 20]),
           ),
-          Paint()
-            ..color = const Color.fromARGB(255, 26, 255, 0)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 10
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round);
+          unDonePathPaint);
     }
-
-    ///
-    /// draw done levels
-    ///
-
-    for (var element in selectedPoints) {
-      canvas.drawPath(
-        x.transform(Matrix4.translationValues(
-                //polowa x
-                (element.dx - 25),
-                (element.dy - 25),
-                0)
-            .storage),
-        Paint()
-          ..color = Colors.red
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 10
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round,
-      );
-    }
-
-    ///
-    /// draw undone level
-    ///
-    canvas.drawPath(
-      xDone.transform(
-          Matrix4.translationValues(lastPoint.dx - 25, lastPoint.dy - 25, 0)
-              .storage),
-      Paint()
-        ..color = Colors.blue.withOpacity(_showCurrentLevel)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
   }
 
   @override
@@ -241,53 +235,40 @@ class MapPathPainter extends CustomPainter {
     return true;
   }
 
-  List<Level> _getLevels(Size size) {
+  List<Path> _getLevels(
+    Size size,
+  ) {
     var lvls = [
-      Level(
-        path: Path()
-          ..moveTo(0, 0)
-          ..cubicTo(
-              120, size.height / 5, 60, size.height / 4, 40, size.height - 40),
-      ),
-      Level(
-        path: Path()
-          ..moveTo(40, size.height - 40)
-          ..cubicTo(60, size.height, 270, size.height + 40, 200, 200),
-      ),
-      Level(
-        path: Path()
-          ..moveTo(200, 200)
-          ..cubicTo(200, 0, 450, -80, 380, 270),
-      ),
+      Path()
+        ..moveTo(0, 30)
+        ..cubicTo(120, size.height / 5, 60, size.height / 4,
+            checkpoints[0].position.dx, checkpoints[0].position.dy),
+      Path()
+        ..moveTo(checkpoints[0].position.dx, checkpoints[0].position.dy)
+        ..cubicTo(60, size.height, 260, size.height - 40,
+            checkpoints[1].position.dx, checkpoints[1].position.dy),
+      Path()
+        ..moveTo(checkpoints[1].position.dx, checkpoints[1].position.dy)
+        ..cubicTo(200, 0, 460, 0, checkpoints[2].position.dx,
+            checkpoints[2].position.dy),
+      Path()
+        ..moveTo(checkpoints[2].position.dx, checkpoints[2].position.dy)
+        ..cubicTo(350, 360, 520, 400, checkpoints[3].position.dx,
+            checkpoints[3].position.dy),
     ];
     return lvls;
   }
 }
 
-(Path, List<Offset>) _generateStaticPathAndDoneLvl(
-    Size size, int lvl, List<Level> levels) {
-  List<Offset> selectedPoints = [];
-
-  final indexes =
-      levels.where((element) => levels.indexOf(element) < lvl).toList();
-  Path path = Path();
+Path _generateStaticPathAndDoneLvl(Size size, int lvl, List<Path> levels) {
+  final indexes = levels.where((element) => levels.indexOf(element) < lvl);
+  final path = Path();
   for (var element in indexes) {
-    path.addPath(element.path, Offset.zero);
-    final PathMetrics pathMetrics = element.path.computeMetrics();
-    for (final PathMetric pathMetric in pathMetrics) {
-      final Tangent tangent =
-          pathMetric.getTangentForOffset(pathMetric.length)!;
-      selectedPoints.add(tangent.position);
-    }
-    Talker().good(selectedPoints.toString());
+    path.addPath(element, Offset.zero);
   }
-  return (path, selectedPoints);
+  return path;
 }
 
-(Path, Offset) _generateAnimatePathAndUnDoneLvl(
-    Size size, int lvl, List<Level> levels) {
-  PathMetric pathMetric = levels[lvl].path.computeMetrics().first;
-  Offset lastPoint =
-      pathMetric.getTangentForOffset(pathMetric.length)!.position;
-  return (levels[lvl].path, lastPoint);
+Path _generateAnimatePathAndUnDoneLvl(Size size, int lvl, List<Path> levels) {
+  return levels[lvl];
 }
