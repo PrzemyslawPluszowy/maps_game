@@ -58,7 +58,6 @@ class MapCubit extends Cubit<MapState> {
 
   static void loadLvl(int indexLvl) {
     Talker().warning('loadLvl for level $indexLvl');
-    // Tutaj dodaj kod związany z ładowaniem poziomu
   }
 
   Future loadImage() async {
