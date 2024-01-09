@@ -25,6 +25,7 @@ class _MapGenerateState extends State<MapGenerate>
   static const double _widthCheckpoint = 40;
   static const double _heightCheckpoint = 40;
   static const Duration _durationAnimatePath = Duration(seconds: 3);
+  static const double _widthMap = 1600;
   late final Size size;
   late final Animation _animationPath;
   late final AnimationController _controllerAnimatePath;
@@ -68,7 +69,7 @@ class _MapGenerateState extends State<MapGenerate>
     final doneCheckpoints = checkpoints.sublist(0, checkpoints.length - 1);
     const animateDuration = Duration(milliseconds: 800);
     return SizedBox(
-        width: 1600,
+        width: _widthMap,
         height: MediaQuery.of(context).size.height,
         child: Stack(
           fit: StackFit.expand,

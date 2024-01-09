@@ -35,7 +35,7 @@ class MapCubit extends Cubit<MapState> {
       ),
       Checkpoint(
         onTap: () => loadLvl(4),
-        countDoneStars: 4,
+        countDoneStars: 2,
         position: const Offset(500, 260),
       ),
       Checkpoint(
