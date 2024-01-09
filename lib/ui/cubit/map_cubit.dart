@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/services.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -44,6 +46,16 @@ class MapCubit extends Cubit<MapState> {
         position: const Offset(550, 40),
       ),
     ];
+  }
+
+  setCheckpoints(int actualLvl, Checkpoint checkpoint) {
+    if (state is _Loaded) {
+      _Loaded newState = (state as _Loaded).copyWith(
+          checkpoints: checkpoints,
+          lvl: actualLvl,
+          image: (state as _Loaded).image);
+      emit(newState);
+    }
   }
 
   static void loadLvl(int indexLvl) {

@@ -5,7 +5,7 @@ import 'package:game_map/ui/cubit/map_cubit.dart';
 import 'package:game_map/ui/widgets/map_generate.dart';
 
 class MapWidget extends StatefulWidget {
-  const MapWidget({Key? key}) : super(key: key);
+  const MapWidget({super.key});
 
   @override
   State<MapWidget> createState() => _MapWidgetState();
