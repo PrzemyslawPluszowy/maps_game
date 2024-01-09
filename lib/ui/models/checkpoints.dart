@@ -10,5 +10,6 @@ class Checkpoint with _$Checkpoint {
   const factory Checkpoint({
     required Offset position,
     required int countDoneStars,
+    required Function() onTap,
   }) = _Checkpoint;
 }

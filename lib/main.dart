@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<MapCubit>(create: (context) => MapCubit()),
+        BlocProvider<MapCubit>(create: (context) => MapCubit()..loadImage()),
       ],
       child: MaterialApp(
         title: 'Flutter Demo',

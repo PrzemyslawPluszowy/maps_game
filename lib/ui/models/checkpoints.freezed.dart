@@ -18,6 +18,7 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$Checkpoint {
   Offset get position => throw _privateConstructorUsedError;
   int get countDoneStars => throw _privateConstructorUsedError;
+  dynamic Function() get onTap => throw _privateConstructorUsedError;
 
   @JsonKey(ignore: true)
   $CheckpointCopyWith<Checkpoint> get copyWith =>
@@ -30,7 +31,7 @@ abstract class $CheckpointCopyWith<$Res> {
           Checkpoint value, $Res Function(Checkpoint) then) =
       _$CheckpointCopyWithImpl<$Res, Checkpoint>;
   @useResult
-  $Res call({Offset position, int countDoneStars});
+  $Res call({Offset position, int countDoneStars, dynamic Function() onTap});
 }
 
 /// @nodoc
@@ -48,6 +49,7 @@ class _$CheckpointCopyWithImpl<$Res, $Val extends Checkpoint>
   $Res call({
     Object? position = null,
     Object? countDoneStars = null,
+    Object? onTap = null,
   }) {
     return _then(_value.copyWith(
       position: null == position
@@ -58,6 +60,10 @@ class _$CheckpointCopyWithImpl<$Res, $Val extends Checkpoint>
           ? _value.countDoneStars
           : countDoneStars // ignore: cast_nullable_to_non_nullable
               as int,
+      onTap: null == onTap
+          ? _value.onTap
+          : onTap // ignore: cast_nullable_to_non_nullable
+              as dynamic Function(),
     ) as $Val);
   }
 }
@@ -70,7 +76,7 @@ abstract class _$$CheckpointImplCopyWith<$Res>
       __$$CheckpointImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({Offset position, int countDoneStars});
+  $Res call({Offset position, int countDoneStars, dynamic Function() onTap});
 }
 
 /// @nodoc
@@ -86,6 +92,7 @@ class __$$CheckpointImplCopyWithImpl<$Res>
   $Res call({
     Object? position = null,
     Object? countDoneStars = null,
+    Object? onTap = null,
   }) {
     return _then(_$CheckpointImpl(
       position: null == position
@@ -96,6 +103,10 @@ class __$$CheckpointImplCopyWithImpl<$Res>
           ? _value.countDoneStars
           : countDoneStars // ignore: cast_nullable_to_non_nullable
               as int,
+      onTap: null == onTap
+          ? _value.onTap
+          : onTap // ignore: cast_nullable_to_non_nullable
+              as dynamic Function(),
     ));
   }
 }
@@ -104,16 +115,20 @@ class __$$CheckpointImplCopyWithImpl<$Res>
 
 class _$CheckpointImpl with DiagnosticableTreeMixin implements _Checkpoint {
   const _$CheckpointImpl(
-      {required this.position, required this.countDoneStars});
+      {required this.position,
+      required this.countDoneStars,
+      required this.onTap});
 
   @override
   final Offset position;
   @override
   final int countDoneStars;
+  @override
+  final dynamic Function() onTap;
 
   @override
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) {
-    return 'Checkpoint(position: $position, countDoneStars: $countDoneStars)';
+    return 'Checkpoint(position: $position, countDoneStars: $countDoneStars, onTap: $onTap)';
   }
 
   @override
@@ -122,7 +137,8 @@ class _$CheckpointImpl with DiagnosticableTreeMixin implements _Checkpoint {
     properties
       ..add(DiagnosticsProperty('type', 'Checkpoint'))
       ..add(DiagnosticsProperty('position', position))
-      ..add(DiagnosticsProperty('countDoneStars', countDoneStars));
+      ..add(DiagnosticsProperty('countDoneStars', countDoneStars))
+      ..add(DiagnosticsProperty('onTap', onTap));
   }
 
   @override
@@ -133,11 +149,12 @@ class _$CheckpointImpl with DiagnosticableTreeMixin implements _Checkpoint {
             (identical(other.position, position) ||
                 other.position == position) &&
             (identical(other.countDoneStars, countDoneStars) ||
-                other.countDoneStars == countDoneStars));
+                other.countDoneStars == countDoneStars) &&
+            (identical(other.onTap, onTap) || other.onTap == onTap));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, position, countDoneStars);
+  int get hashCode => Object.hash(runtimeType, position, countDoneStars, onTap);
 
   @JsonKey(ignore: true)
   @override
@@ -149,12 +166,15 @@ class _$CheckpointImpl with DiagnosticableTreeMixin implements _Checkpoint {
 abstract class _Checkpoint implements Checkpoint {
   const factory _Checkpoint(
       {required final Offset position,
-      required final int countDoneStars}) = _$CheckpointImpl;
+      required final int countDoneStars,
+      required final dynamic Function() onTap}) = _$CheckpointImpl;
 
   @override
   Offset get position;
   @override
   int get countDoneStars;
+  @override
+  dynamic Function() get onTap;
   @override
   @JsonKey(ignore: true)
   _$$CheckpointImplCopyWith<_$CheckpointImpl> get copyWith =>
