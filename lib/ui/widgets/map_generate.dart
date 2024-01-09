@@ -64,9 +64,16 @@ class _MapGenerateState extends State<MapGenerate>
 
   @override
   Widget build(BuildContext context) {
+    /// get checkpoints for actual level
     final checkpoints = widget.checkpoints.sublist(0, widget.lvl + 1);
+
+    /// get active checkpoint
     final unDoneCheckpoints = checkpoints.last;
+
+    /// get done checkpoints
     final doneCheckpoints = checkpoints.sublist(0, checkpoints.length - 1);
+
+    /// animate duration for checkpoints,show arrow, and show canavas after load image
     const animateDuration = Duration(milliseconds: 800);
     return SizedBox(
         width: _widthMap,
@@ -74,6 +81,7 @@ class _MapGenerateState extends State<MapGenerate>
         child: Stack(
           fit: StackFit.expand,
           children: [
+            // 1. draw background image , 2. draw static path with dash , 3. draw animated path with dash
             CustomPaint(
               painter: MapPathPainter(
                   bgImage: widget.image,
@@ -82,10 +90,16 @@ class _MapGenerateState extends State<MapGenerate>
                   checkpoints: widget.checkpoints,
                   lvl: widget.lvl),
             ).animate().fadeIn(duration: animateDuration),
+
+            /// draw checkpoints with stars
             ...doneCheckpoints.map((e) => _checkpointWidget(checkpoint: e)),
+
+            /// draw actual checkpoint
             if (_progressAnimation == 1)
               _checkpointWidget(checkpoint: unDoneCheckpoints, isUndone: true)
                 ..animate().fadeIn(duration: animateDuration),
+
+            /// draw animated arrow on actual checkpoint
             if (_progressAnimation == 1)
               _animatedArrowDown(unDoneCheckpoints)
                   .animate(
